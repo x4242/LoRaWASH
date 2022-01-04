@@ -58,7 +58,19 @@
 //  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀
 
 
-const uint8_t payloadBufferLength = 4;    // Adjust to fit max payload length
+const uint8_t payloadBufferLength = 1;    // Adjust to fit max payload length
+
+#define SENSOR_1_PIN 2 // ADC2_2
+#define SENSOR_2_PIN 32 // ADC1_4
+#define SENSOR_3_PIN 33 // ADC1_5
+#define SENSOR_4_PIN 12 // ADC2_5
+
+struct status {
+    uint8_t sensor1:1;
+    uint8_t sensor2:1;
+    uint8_t sensor3:1;
+    uint8_t sensor4:1;    
+} sensorStatus;
 
 
 //  █ █ █▀▀ █▀▀ █▀▄   █▀▀ █▀█ █▀▄ █▀▀   █▀▀ █▀█ █▀▄
@@ -693,6 +705,15 @@ lmic_tx_error_t scheduleUplink(uint8_t fPort, uint8_t* data, uint8_t dataLength,
 
 static volatile uint16_t counter_ = 0;
 
+uint8_t getSensorValue(uint8_t sensorPin)
+{
+    uint16_t result = analogRead(sensorPin);
+    if (result < 1)
+        return 0;
+    else
+        return 1;
+}
+
 uint16_t getCounterValue()
 {
     // Increments counter and returns the new value.
@@ -766,9 +787,19 @@ void processWork(ostime_t doWorkJobTimeStamp)
         {
             // Prepare uplink payload.
             uint8_t fPort = 10;
-            payloadBuffer[0] = counterValue >> 8;
-            payloadBuffer[1] = counterValue & 0xFF;
-            uint8_t payloadLength = 2;
+            // payloadBuffer[0] = counterValue >> 8;
+            // payloadBuffer[1] = counterValue & 0xFF;
+
+            uint8_t payloadLength = 1;
+            sensorStatus.sensor1 = getSensorValue(SENSOR_1_PIN);
+            sensorStatus.sensor2 = getSensorValue(SENSOR_2_PIN);
+            sensorStatus.sensor3 = getSensorValue(SENSOR_3_PIN);
+            sensorStatus.sensor4 = getSensorValue(SENSOR_4_PIN);
+            
+            payloadBuffer[0] = sensorStatus.sensor1 << 1;
+            payloadBuffer[0] = (payloadBuffer[0] | sensorStatus.sensor2) << 1;
+            payloadBuffer[0] = (payloadBuffer[0] | sensorStatus.sensor3) << 1;
+            payloadBuffer[0] = (payloadBuffer[0] | sensorStatus.sensor4);
 
             scheduleUplink(fPort, payloadBuffer, payloadLength);
         }
@@ -848,6 +879,7 @@ void setup()
     // Place code for initializing sensors etc. here.
 
     resetCounter();
+    sensorStatus = {0, 0, 0, 0};
 
 //  █ █ █▀▀ █▀▀ █▀▄   █▀▀ █▀█ █▀▄ █▀▀   █▀▀ █▀█ █▀▄
 //  █ █ ▀▀█ █▀▀ █▀▄   █   █ █ █ █ █▀▀   █▀▀ █ █ █ █
