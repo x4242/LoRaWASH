@@ -1,37 +1,37 @@
 /*******************************************************************************
  *
  *  File:          LMIC-node.cpp
- * 
+ *
  *  Function:      LMIC-node main application file.
- * 
+ *
  *  Copyright:     Copyright (c) 2021 Leonel Lopes Parente
  *                 Copyright (c) 2018 Terry Moore, MCCI
  *                 Copyright (c) 2015 Thomas Telkamp and Matthijs Kooijman
  *
- *                 Permission is hereby granted, free of charge, to anyone 
- *                 obtaining a copy of this document and accompanying files to do, 
+ *                 Permission is hereby granted, free of charge, to anyone
+ *                 obtaining a copy of this document and accompanying files to do,
  *                 whatever they want with them without any restriction, including,
  *                 but not limited to, copying, modification and redistribution.
- *                 The above copyright notice and this permission notice shall be 
+ *                 The above copyright notice and this permission notice shall be
  *                 included in all copies or substantial portions of the Software.
- * 
+ *
  *                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY.
- * 
+ *
  *  License:       MIT License. See accompanying LICENSE file.
- * 
+ *
  *  Author:        Leonel Lopes Parente
- * 
+ *
  *  Description:   To get LMIC-node up and running no changes need to be made
  *                 to any source code. Only configuration is required
  *                 in platform-io.ini and lorawan-keys.h.
- * 
+ *
  *                 If you want to modify the code e.g. to add your own sensors,
  *                 that can be done in the two area's that start with
  *                 USER CODE BEGIN and end with USER CODE END. There's no need
  *                 to change code in other locations (unless you have a reason).
  *                 See README.md for documentation and how to use LMIC-node.
- * 
- *                 LMIC-node uses the concepts from the original ttn-otaa.ino 
+ *
+ *                 LMIC-node uses the concepts from the original ttn-otaa.ino
  *                 and ttn-abp.ino examples provided with the LMIC libraries.
  *                 LMIC-node combines both OTAA and ABP support in a single example,
  *                 supports multiple LMIC libraries, contains several improvements
@@ -41,10 +41,10 @@
  *                 and supports many popular development boards out of the box.
  *                 To get a working node up and running only requires some configuration.
  *                 No programming or customization of source code required.
- * 
+ *
  *  Dependencies:  External libraries:
  *                 MCCI LoRaWAN LMIC library  https://github.com/mcci-catena/arduino-lmic
- *                 IBM LMIC framework         https://github.com/matthijskooijman/arduino-lmic  
+ *                 IBM LMIC framework         https://github.com/matthijskooijman/arduino-lmic
  *                 U8g2                       https://github.com/olikraus/u8g2
  *                 EasyLed                    https://github.com/lnlp/EasyLed
  *
@@ -60,6 +60,7 @@
 
 const uint8_t payloadBufferLength = 1;    // Adjust to fit max payload length
 
+#define ANALOG_READ_RESOLUTION 9 // 9 = 0-511, 12 = 0-4095, default is 12
 #define SENSOR_1_PIN 2 // ADC2_2
 #define SENSOR_2_PIN 32 // ADC1_4
 #define SENSOR_3_PIN 33 // ADC1_5
@@ -69,13 +70,13 @@ struct status {
     uint8_t sensor1:1;
     uint8_t sensor2:1;
     uint8_t sensor3:1;
-    uint8_t sensor4:1;    
+    uint8_t sensor4:1;
 } sensorStatus;
 
 
 //  █ █ █▀▀ █▀▀ █▀▄   █▀▀ █▀█ █▀▄ █▀▀   █▀▀ █▀█ █▀▄
 //  █ █ ▀▀█ █▀▀ █▀▄   █   █ █ █ █ █▀▀   █▀▀ █ █ █ █
-//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀ 
+//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀
 
 
 uint8_t payloadBuffer[payloadBufferLength];
@@ -92,7 +93,7 @@ uint32_t doWorkIntervalSeconds = DO_WORK_INTERVAL_SECONDS;  // Change value in p
     // Below callbacks are used by LMIC for reading above values.
     void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8); }
     void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8); }
-    void os_getDevKey (u1_t* buf) { memcpy_P(buf, APPKEY, 16); }    
+    void os_getDevKey (u1_t* buf) { memcpy_P(buf, APPKEY, 16); }
 #else
     // ABP activation
     static const u4_t DEVADDR = ABP_DEVADDR ;
@@ -141,13 +142,13 @@ int16_t getRssi(int8_t snr)
             }
             else
             {
-                rssiAdjust = SX1276_RSSI_ADJUST_LF;   
+                rssiAdjust = SX1276_RSSI_ADJUST_LF;
             }
         #else
-            // CFG_sx1272_radio    
+            // CFG_sx1272_radio
             rssiAdjust = SX1272_RSSI_ADJUST;
-        #endif    
-        
+        #endif
+
         // Revert modification (applied in lmic/radio.c) to get PacketRssi.
         int16_t packetRssi = LMIC.rssi + 125 - RSSI_OFFSET;
         if (snr < 0)
@@ -164,32 +165,32 @@ int16_t getRssi(int8_t snr)
 }
 
 
-void printEvent(ostime_t timestamp, 
-                const char * const message, 
+void printEvent(ostime_t timestamp,
+                const char * const message,
                 PrintTarget target = PrintTarget::All,
                 bool clearDisplayStatusRow = true,
                 bool eventLabel = false)
 {
-    #ifdef USE_DISPLAY 
+    #ifdef USE_DISPLAY
         if (target == PrintTarget::All || target == PrintTarget::Display)
         {
             display.clearLine(TIME_ROW);
             display.setCursor(COL_0, TIME_ROW);
-            display.print(F("Time:"));                 
-            display.print(timestamp); 
+            display.print(F("Time:"));
+            display.print(timestamp);
             display.clearLine(EVENT_ROW);
             if (clearDisplayStatusRow)
             {
-                display.clearLine(STATUS_ROW);    
+                display.clearLine(STATUS_ROW);
             }
-            display.setCursor(COL_0, EVENT_ROW);               
+            display.setCursor(COL_0, EVENT_ROW);
             display.print(message);
         }
-    #endif  
-    
+    #endif
+
     #ifdef USE_SERIAL
         // Create padded/indented output without using printf().
-        // printf() is not default supported/enabled in each Arduino core. 
+        // printf() is not default supported/enabled in each Arduino core.
         // Not using printf() will save memory for memory constrainted devices.
         String timeString(timestamp);
         uint8_t len = timeString.length();
@@ -206,12 +207,12 @@ void printEvent(ostime_t timestamp,
             }
             serial.println(message);
         }
-    #endif   
-}           
+    #endif
+}
 
-void printEvent(ostime_t timestamp, 
-                ev_t ev, 
-                PrintTarget target = PrintTarget::All, 
+void printEvent(ostime_t timestamp,
+                ev_t ev,
+                PrintTarget target = PrintTarget::All,
                 bool clearDisplayStatusRow = true)
 {
     #if defined(USE_DISPLAY) || defined(USE_SERIAL)
@@ -230,7 +231,7 @@ void printFrameCounters(PrintTarget target = PrintTarget::All)
             display.print(F("Up:"));
             display.print(LMIC.seqnoUp);
             display.print(F(" Dn:"));
-            display.print(LMIC.seqnoDn);        
+            display.print(LMIC.seqnoDn);
         }
     #endif
 
@@ -241,35 +242,35 @@ void printFrameCounters(PrintTarget target = PrintTarget::All)
             serial.print(F("Up: "));
             serial.print(LMIC.seqnoUp);
             serial.print(F(",  Down: "));
-            serial.println(LMIC.seqnoDn);        
+            serial.println(LMIC.seqnoDn);
         }
-    #endif        
-}      
+    #endif
+}
 
 
 void printSessionKeys()
-{    
+{
     #if defined(USE_SERIAL) && defined(MCCI_LMIC)
         u4_t networkId = 0;
         devaddr_t deviceAddress = 0;
         u1_t networkSessionKey[16];
         u1_t applicationSessionKey[16];
-        LMIC_getSessionKeys(&networkId, &deviceAddress, 
+        LMIC_getSessionKeys(&networkId, &deviceAddress,
                             networkSessionKey, applicationSessionKey);
 
-        printSpaces(serial, MESSAGE_INDENT);    
+        printSpaces(serial, MESSAGE_INDENT);
         serial.print(F("Network Id: "));
         serial.println(networkId, DEC);
 
-        printSpaces(serial, MESSAGE_INDENT);    
+        printSpaces(serial, MESSAGE_INDENT);
         serial.print(F("Device Address: "));
         serial.println(deviceAddress, HEX);
 
-        printSpaces(serial, MESSAGE_INDENT);    
+        printSpaces(serial, MESSAGE_INDENT);
         serial.print(F("Application Session Key: "));
         printHex(serial, applicationSessionKey, 16, true, '-');
 
-        printSpaces(serial, MESSAGE_INDENT);    
+        printSpaces(serial, MESSAGE_INDENT);
         serial.print(F("Network Session Key:     "));
         printHex(serial, networkSessionKey, 16, true, '-');
     #endif
@@ -288,61 +289,61 @@ void printDownlinkInfo(void)
         int8_t snrDecimalFraction = snrTenfold % 10;
         int16_t rssi = getRssi(snr);
 
-        uint8_t fPort = 0;        
+        uint8_t fPort = 0;
         if (LMIC.txrxFlags & TXRX_PORT)
         {
             fPort = LMIC.frame[LMIC.dataBeg -1];
-        }        
+        }
 
         #ifdef USE_DISPLAY
-            display.clearLine(EVENT_ROW);        
+            display.clearLine(EVENT_ROW);
             display.setCursor(COL_0, EVENT_ROW);
             display.print(F("RX P:"));
             display.print(fPort);
             if (dataLength != 0)
             {
                 display.print(" Len:");
-                display.print(LMIC.dataLen);                       
+                display.print(LMIC.dataLen);
             }
-            display.clearLine(STATUS_ROW);        
+            display.clearLine(STATUS_ROW);
             display.setCursor(COL_0, STATUS_ROW);
             display.print(F("RSSI"));
             display.print(rssi);
             display.print(F(" SNR"));
-            display.print(snr);                
-            display.print(".");                
-            display.print(snrDecimalFraction);                      
+            display.print(snr);
+            display.print(".");
+            display.print(snrDecimalFraction);
         #endif
 
         #ifdef USE_SERIAL
-            printSpaces(serial, MESSAGE_INDENT);    
+            printSpaces(serial, MESSAGE_INDENT);
             serial.println(F("Downlink received"));
 
             printSpaces(serial, MESSAGE_INDENT);
             serial.print(F("RSSI: "));
             serial.print(rssi);
             serial.print(F(" dBm,  SNR: "));
-            serial.print(snr);                        
-            serial.print(".");                        
-            serial.print(snrDecimalFraction);                        
+            serial.print(snr);
+            serial.print(".");
+            serial.print(snrDecimalFraction);
             serial.println(F(" dB"));
 
-            printSpaces(serial, MESSAGE_INDENT);    
+            printSpaces(serial, MESSAGE_INDENT);
             serial.print(F("Port: "));
             serial.println(fPort);
-   
+
             if (dataLength != 0)
             {
                 printSpaces(serial, MESSAGE_INDENT);
                 serial.print(F("Length: "));
-                serial.println(LMIC.dataLen);                   
-                printSpaces(serial, MESSAGE_INDENT);    
+                serial.println(LMIC.dataLen);
+                printSpaces(serial, MESSAGE_INDENT);
                 serial.print(F("Data: "));
                 printHex(serial, LMIC.frame+LMIC.dataBeg, LMIC.dataLen, true, ' ');
             }
         #endif
     #endif
-} 
+}
 
 
 void printHeader(void)
@@ -367,21 +368,21 @@ void printHeader(void)
     #ifdef USE_SERIAL
         serial.println(F("\n\nLMIC-node\n"));
         serial.print(F("Device-id:     "));
-        serial.println(deviceId);            
+        serial.println(deviceId);
         serial.print(F("LMIC library:  "));
-        #ifdef MCCI_LMIC  
+        #ifdef MCCI_LMIC
             serial.println(F("MCCI"));
         #else
-            serial.println(F("Classic [Deprecated]")); 
+            serial.println(F("Classic [Deprecated]"));
         #endif
         serial.print(F("Activation:    "));
-        #ifdef OTAA_ACTIVATION  
+        #ifdef OTAA_ACTIVATION
             serial.println(F("OTAA"));
         #else
-            serial.println(F("ABP")); 
+            serial.println(F("ABP"));
         #endif
         #if defined(LMIC_DEBUG_LEVEL) && LMIC_DEBUG_LEVEL > 0
-            serial.print(F("LMIC debug:    "));  
+            serial.print(F("LMIC debug:    "));
             serial.println(LMIC_DEBUG_LEVEL);
         #endif
         serial.print(F("Interval:      "));
@@ -392,11 +393,11 @@ void printHeader(void)
             serial.println();
         }
     #endif
-}     
+}
 
 
 #ifdef ABP_ACTIVATION
-    void setAbpParameters(dr_t dataRate = DefaultABPDataRate, s1_t txPower = DefaultABPTxPower) 
+    void setAbpParameters(dr_t dataRate = DefaultABPDataRate, s1_t txPower = DefaultABPTxPower)
     {
         // Set static session parameters. Instead of dynamically establishing a session
         // by joining the network, precomputed session parameters are be provided.
@@ -477,14 +478,14 @@ void printHeader(void)
         LMIC.dn2Dr = DR_SF9;
 
         // Set data rate and transmit power (note: txpow is possibly ignored by the library)
-        LMIC_setDrTxpow(dataRate, txPower);    
+        LMIC_setDrTxpow(dataRate, txPower);
     }
 #endif //ABP_ACTIVATION
 
 
 void initLmic(bit_t adrEnabled = 1,
-              dr_t abpDataRate = DefaultABPDataRate, 
-              s1_t abpTxPower = DefaultABPTxPower) 
+              dr_t abpDataRate = DefaultABPDataRate,
+              s1_t abpTxPower = DefaultABPTxPower)
 {
     // ostime_t timestamp = os_getTime();
 
@@ -497,7 +498,7 @@ void initLmic(bit_t adrEnabled = 1,
         setAbpParameters(abpDataRate, abpTxPower);
     #endif
 
-    // Enable or disable ADR (data rate adaptation). 
+    // Enable or disable ADR (data rate adaptation).
     // Should be turned off if the device is not stationary (mobile).
     // 1 is on, 0 is off.
     LMIC_setAdrMode(adrEnabled);
@@ -509,7 +510,7 @@ void initLmic(bit_t adrEnabled = 1,
             // but only one group of 8 should (a subband) should be active
             // TTN recommends the second sub band, 1 in a zero based count.
             // https://github.com/TheThingsNetwork/gateway-conf/blob/master/US-global_conf.json
-            LMIC_selectSubBand(1); 
+            LMIC_selectSubBand(1);
         #endif
     }
 
@@ -520,7 +521,7 @@ void initLmic(bit_t adrEnabled = 1,
             #if defined(MCCI_LMIC) && LMIC_CLOCK_ERROR_PPM > 4000
                 // Allow clock error percentage to be > 0.4%
                 #define LMIC_ENABLE_arbitrary_clock_error 1
-            #endif    
+            #endif
             clockError = (LMIC_CLOCK_ERROR_PPM / 100) * (MAX_CLOCK_ERROR / 100) / 100;
             LMIC_setClockError(clockError);
         #endif
@@ -530,7 +531,7 @@ void initLmic(bit_t adrEnabled = 1,
             serial.print(LMIC_CLOCK_ERROR_PPM);
             serial.print(" ppm (");
             serial.print(clockError);
-            serial.println(")");            
+            serial.println(")");
         #endif
     #endif
 
@@ -542,16 +543,16 @@ void initLmic(bit_t adrEnabled = 1,
 }
 
 
-#ifdef MCCI_LMIC 
+#ifdef MCCI_LMIC
 void onLmicEvent(void *pUserData, ev_t ev)
 #else
-void onEvent(ev_t ev) 
+void onEvent(ev_t ev)
 #endif
 {
     // LMIC event handler
-    ostime_t timestamp = os_getTime(); 
+    ostime_t timestamp = os_getTime();
 
-    switch (ev) 
+    switch (ev)
     {
 #ifdef MCCI_LMIC
         // Only supported in MCCI LMIC library:
@@ -561,14 +562,14 @@ void onEvent(ev_t ev)
 
         case EV_TXSTART:
             setTxIndicatorsOn();
-            printEvent(timestamp, ev);            
-            break;               
+            printEvent(timestamp, ev);
+            break;
 
         case EV_JOIN_TXCOMPLETE:
         case EV_TXCANCELED:
             setTxIndicatorsOn(false);
             printEvent(timestamp, ev);
-            break;               
+            break;
 #endif
         case EV_JOINED:
             setTxIndicatorsOn(false);
@@ -578,7 +579,7 @@ void onEvent(ev_t ev)
             // Disable link check validation.
             // Link check validation is automatically enabled
             // during join, but because slow data rates change
-            // max TX size, it is not used in this example.                    
+            // max TX size, it is not used in this example.
             LMIC_setLinkCheckMode(0);
 
             // The doWork job has probably run already (while
@@ -592,7 +593,7 @@ void onEvent(ev_t ev)
 
         case EV_TXCOMPLETE:
             // Transmit completed, includes waiting for RX windows.
-            setTxIndicatorsOn(false);   
+            setTxIndicatorsOn(false);
             printEvent(timestamp, ev);
             printFrameCounters();
 
@@ -605,18 +606,18 @@ void onEvent(ev_t ev)
                     fPort = LMIC.frame[LMIC.dataBeg -1];
                 }
                 printDownlinkInfo();
-                processDownlink(timestamp, fPort, LMIC.frame + LMIC.dataBeg, LMIC.dataLen);                
+                processDownlink(timestamp, fPort, LMIC.frame + LMIC.dataBeg, LMIC.dataLen);
             }
-            break;     
-          
+            break;
+
         // Below events are printed only.
         case EV_SCAN_TIMEOUT:
         case EV_BEACON_FOUND:
         case EV_BEACON_MISSED:
         case EV_BEACON_TRACKED:
         case EV_RFU1:                    // This event is defined but not used in code
-        case EV_JOINING:        
-        case EV_JOIN_FAILED:           
+        case EV_JOINING:
+        case EV_JOIN_FAILED:
         case EV_REJOIN_FAILED:
         case EV_LOST_TSYNC:
         case EV_RESET:
@@ -625,13 +626,13 @@ void onEvent(ev_t ev)
         case EV_LINK_ALIVE:
 #ifdef MCCI_LMIC
         // Only supported in MCCI LMIC library:
-        case EV_SCAN_FOUND:              // This event is defined but not used in code 
+        case EV_SCAN_FOUND:              // This event is defined but not used in code
 #endif
-            printEvent(timestamp, ev);    
+            printEvent(timestamp, ev);
             break;
 
-        default: 
-            printEvent(timestamp, "Unknown Event");    
+        default:
+            printEvent(timestamp, "Unknown Event");
             break;
     }
 }
@@ -646,14 +647,14 @@ static void doWorkCallback(osjob_t* job)
     #ifdef USE_SERIAL
         serial.println();
         printEvent(timestamp, "doWork job started", PrintTarget::Serial);
-    #endif    
+    #endif
 
     // Do the work that needs to be performed.
     processWork(timestamp);
 
     // This job must explicitly reschedule itself for the next run.
     ostime_t startAt = timestamp + sec2osticks((int64_t)doWorkIntervalSeconds);
-    os_setTimedCallback(&doWorkJob, startAt, doWorkCallback);    
+    os_setTimedCallback(&doWorkJob, startAt, doWorkCallback);
 }
 
 
@@ -672,13 +673,13 @@ lmic_tx_error_t scheduleUplink(uint8_t fPort, uint8_t* data, uint8_t dataLength,
     if (retval == LMIC_ERROR_SUCCESS)
     {
         #ifdef CLASSIC_LMIC
-            // For MCCI_LMIC this will be handled in EV_TXSTART        
-            setTxIndicatorsOn();  
-        #endif        
+            // For MCCI_LMIC this will be handled in EV_TXSTART
+            setTxIndicatorsOn();
+        #endif
     }
     else
     {
-        String errmsg; 
+        String errmsg;
         #ifdef USE_SERIAL
             errmsg = "LMIC Error: ";
             #ifdef MCCI_LMIC
@@ -692,9 +693,9 @@ lmic_tx_error_t scheduleUplink(uint8_t fPort, uint8_t* data, uint8_t dataLength,
             errmsg = "LMIC Err: ";
             errmsg.concat(retval);
             printEvent(timestamp, errmsg.c_str(), PrintTarget::Display);
-        #endif         
+        #endif
     }
-    return retval;    
+    return retval;
 }
 
 
@@ -708,7 +709,18 @@ static volatile uint16_t counter_ = 0;
 uint8_t getSensorValue(uint8_t sensorPin)
 {
     uint16_t result = analogRead(sensorPin);
-    if (result < 1)
+
+    #ifdef USE_SERIAL
+    String printMsg;
+    printMsg = "getSensorValue(): PIN ";
+    printMsg.concat(sensorPin);
+    printMsg.concat(" ADC read value: ");
+    printMsg.concat(result);
+    printEvent(os_getTime(), printMsg.c_str(), PrintTarget::Serial);
+    #endif
+
+
+    if (result < 256)
         return 0;
     else
         return 1;
@@ -730,7 +742,7 @@ void resetCounter()
 
 void processWork(ostime_t doWorkJobTimeStamp)
 {
-    // This function is called from the doWorkCallback() 
+    // This function is called from the doWorkCallback()
     // callback function when the doWork job is executed.
 
     // Uses globals: payloadBuffer and LMIC data structure.
@@ -743,7 +755,7 @@ void processWork(ostime_t doWorkJobTimeStamp)
     if (LMIC.devaddr != 0)
     {
         // Collect input data.
-        // For simplicity LMIC-node uses a counter to simulate a sensor. 
+        // For simplicity LMIC-node uses a counter to simulate a sensor.
         // The counter is increased automatically by getCounterValue()
         // and can be reset with a 'reset counter' command downlink message.
 
@@ -758,7 +770,7 @@ void processWork(ostime_t doWorkJobTimeStamp)
             display.setCursor(COL_0, INTERVAL_ROW);
             display.print("I:");
             display.print(doWorkIntervalSeconds);
-            display.print("s");        
+            display.print("s");
             display.print(" Ctr:");
             display.print(counterValue);
         #endif
@@ -767,7 +779,7 @@ void processWork(ostime_t doWorkJobTimeStamp)
             printSpaces(serial, MESSAGE_INDENT);
             serial.print(F("COUNTER value: "));
             serial.println(counterValue);
-        #endif    
+        #endif
 
         // For simplicity LMIC-node will try to send an uplink
         // message every time processWork() is executed.
@@ -778,7 +790,7 @@ void processWork(ostime_t doWorkJobTimeStamp)
             // TxRx is currently pending, do not send.
             #ifdef USE_SERIAL
                 printEvent(timestamp, "Uplink not scheduled because TxRx pending", PrintTarget::Serial);
-            #endif    
+            #endif
             #ifdef USE_DISPLAY
                 printEvent(timestamp, "UL not scheduled", PrintTarget::Display);
             #endif
@@ -795,7 +807,7 @@ void processWork(ostime_t doWorkJobTimeStamp)
             sensorStatus.sensor2 = getSensorValue(SENSOR_2_PIN);
             sensorStatus.sensor3 = getSensorValue(SENSOR_3_PIN);
             sensorStatus.sensor4 = getSensorValue(SENSOR_4_PIN);
-            
+
             payloadBuffer[0] = sensorStatus.sensor1 << 1;
             payloadBuffer[0] = (payloadBuffer[0] | sensorStatus.sensor2) << 1;
             payloadBuffer[0] = (payloadBuffer[0] | sensorStatus.sensor3) << 1;
@@ -804,8 +816,8 @@ void processWork(ostime_t doWorkJobTimeStamp)
             scheduleUplink(fPort, payloadBuffer, payloadLength);
         }
     }
-}    
- 
+}
+
 
 void processDownlink(ostime_t txCompleteTimestamp, uint8_t fPort, uint8_t* data, uint8_t dataLength)
 {
@@ -828,27 +840,27 @@ void processDownlink(ostime_t txCompleteTimestamp, uint8_t fPort, uint8_t* data,
         ostime_t timestamp = os_getTime();
         resetCounter();
         printEvent(timestamp, "Counter reset", PrintTarget::All, false);
-    }          
+    }
 }
 
 
 //  █ █ █▀▀ █▀▀ █▀▄   █▀▀ █▀█ █▀▄ █▀▀   █▀▀ █▀█ █▀▄
 //  █ █ ▀▀█ █▀▀ █▀▄   █   █ █ █ █ █▀▀   █▀▀ █ █ █ █
-//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀ 
+//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀
 
 
-void setup() 
+void setup()
 {
     // boardInit(InitType::Hardware) must be called at start of setup() before anything else.
     bool hardwareInitSucceeded = boardInit(InitType::Hardware);
 
-    #ifdef USE_DISPLAY 
+    #ifdef USE_DISPLAY
         initDisplay();
     #endif
 
     #ifdef USE_SERIAL
         initSerial(MONITOR_SPEED, WAITFOR_SERIAL_S);
-    #endif    
+    #endif
 
     boardInit(InitType::PostInitSerial);
 
@@ -857,10 +869,10 @@ void setup()
     #endif
 
     if (!hardwareInitSucceeded)
-    {   
+    {
         #ifdef USE_SERIAL
             serial.println(F("Error: hardware init failed."));
-            serial.flush();            
+            serial.flush();
         #endif
         #ifdef USE_DISPLAY
             // Following mesage shown only if failure was unrelated to I2C.
@@ -881,9 +893,39 @@ void setup()
     resetCounter();
     sensorStatus = {0, 0, 0, 0};
 
+    analogSetWidth(ANALOG_READ_RESOLUTION);
+
+    if(!adcAttachPin(SENSOR_1_PIN))  {
+        #ifdef USE_SERIAL
+        Serial.print("setup(): ERROR: ADC not attached to pin ");
+        Serial.println(SENSOR_1_PIN);
+        #endif
+    }
+
+    if(!adcAttachPin(SENSOR_2_PIN))  {
+        #ifdef USE_SERIAL
+        Serial.print("setup(): ERROR: ADC not attached to pin ");
+        Serial.println(SENSOR_2_PIN);
+        #endif
+    }
+
+    if(!adcAttachPin(SENSOR_3_PIN))  {
+        #ifdef USE_SERIAL
+        Serial.print("setup(): ERROR: ADC not attached to pin ");
+        Serial.println(SENSOR_3_PIN);
+        #endif
+    }
+
+    if(!adcAttachPin(SENSOR_4_PIN))  {
+        #ifdef USE_SERIAL
+        Serial.print("setup(): ERROR: ADC not attached to pin ");
+        Serial.println(SENSOR_4_PIN);
+        #endif
+    }
+
 //  █ █ █▀▀ █▀▀ █▀▄   █▀▀ █▀█ █▀▄ █▀▀   █▀▀ █▀█ █▀▄
 //  █ █ ▀▀█ █▀▀ █▀▄   █   █ █ █ █ █▀▀   █▀▀ █ █ █ █
-//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀ 
+//  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀   ▀▀▀ ▀ ▀ ▀▀
 
     if (activationMode == ActivationMode::OTAA)
     {
@@ -895,7 +937,7 @@ void setup()
 }
 
 
-void loop() 
+void loop()
 {
     os_runloop_once();
 }
